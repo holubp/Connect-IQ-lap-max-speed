@@ -1,4 +1,4 @@
-# Connect-IQ-lap-max-speed
+# Connect-IQ Lap Maximum Speed
 Simple Garmin Connect IQ app to enable per-lap maximum speed for Garmin Fenix watches.
 ## Description
 Very minimalistic data field generating 4 numbers:
