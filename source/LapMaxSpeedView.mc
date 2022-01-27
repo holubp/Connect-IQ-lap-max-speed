@@ -170,7 +170,7 @@ class LapMaxSpeedView extends WatchUi.DataField {
 
         View.setLayout(Rez.Layouts.MainLayout(dc));
         var labelView = View.findDrawableById("label");
-        labelView.locY = labelView.locY - 16;
+        labelView.locY = labelView.locY - 22;
         var valueView = View.findDrawableById("value");
         valueView.locY = valueView.locY - YSHIM_MAX;
         valueView = View.findDrawableById("value_cur_max");
@@ -293,10 +293,6 @@ class LapMaxSpeedView extends WatchUi.DataField {
             }
         }
 
- 
-        // label also needs to be updated regularly
-        View.findDrawableById("label").setText(label);
- 
         // Call parent's onUpdate(dc) to redraw the layout
         View.onUpdate(dc);
     }
