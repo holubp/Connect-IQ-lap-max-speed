@@ -1,0 +1,4 @@
+<properties>
+	<property id="appVersion" type="string">0.6</property>
+	<property id="avgPeriod" type="number">10</property>
+</properties>

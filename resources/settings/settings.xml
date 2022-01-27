@@ -1,0 +1,11 @@
+<settings>
+
+    <setting propertyKey="@Properties.appVersion" title="@Strings.AppVersionTitle">
+        <settingConfig type="alphaNumeric" readonly="true" />
+    </setting>
+
+    <setting propertyKey="@Properties.avgPeriod" title="@Strings.avgPeriodTitle">
+        <settingConfig type="numeric" errorMessage="@Strings.avgPeriodError" min="1" max="120"/>
+    </setting>
+
+</settings>

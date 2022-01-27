@@ -13,12 +13,13 @@ class LapMaxSpeedView extends WatchUi.SimpleDataField {
     hidden var _lastlap_max_speed;
     hidden var _current_lap = 0;
     const MAX_SPEED_CHECK = 2000;
+    const DEFAULT_AVG_PERIOD = 10;
 
     class AveragingBoundedArray {
-        hidden var _size;
+        hidden var _size as Number;
         hidden var _array;
-        hidden var _current_index;
-        hidden var _initialized_size;
+        hidden var _current_index as Number;
+        hidden var _initialized_size as Number;
         
         function initialize(size as Lang.Number) {
             _size = size;
@@ -43,6 +44,10 @@ class LapMaxSpeedView extends WatchUi.SimpleDataField {
             _current_index = (_current_index >= (_size - 1)) ? 0 : _current_index + 1;
         }
 
+        function getSize() as Number {
+            return _size;
+        }
+
         // returns average once the array is fully initialized, otherwise returns null
         function getAverage() as Float or Null {
             if (_initialized_size == _size) {
@@ -58,16 +63,43 @@ class LapMaxSpeedView extends WatchUi.SimpleDataField {
         }
     }
 
-    hidden var _lap_speed_array = new AveragingBoundedArray(10);
+    hidden var _lap_speed_array;
     hidden var _lap_maxfloatavg_speed;
     hidden var _lastlap_maxfloatavg_speed;
+
+    function setAppLabel() {
+        var appVersion = Application.Properties.getValue("appVersion");
+        if (appVersion != null && appVersion != "") {
+            label = "Lap max speed v" + appVersion;
+        }
+        else {
+            label = "Lap max speed";
+        }
+    }
 
     // Set the label of the data field here.
     function initialize() {
         SimpleDataField.initialize();
-        label = "Lap max speed";
+        setAppLabel();
         _M_paused = false;
         _M_stopped = true; 
+
+        var lap_speed_array_size = Application.Properties.getValue("avgPeriod");
+        if (lap_speed_array_size != null && lap_speed_array_size > 0) {
+            _lap_speed_array = new AveragingBoundedArray(lap_speed_array_size);
+        }
+        else {
+            _lap_speed_array = new AveragingBoundedArray(DEFAULT_AVG_PERIOD);
+        }
+    }
+
+    function onSettingsChanged() {
+        var new_size = Application.Properties.getValue("avgPeriod");
+        if (new_size != null && new_size > 0 && new_size != _lap_speed_array.getSize()) {
+            System.println("Reinitializing _lap_speed_array from " + _lap_speed_array.getSize() + " to " + new_size);
+            _lap_speed_array = new AveragingBoundedArray(new_size);
+        }
+        setAppLabel();
     }
 
 /*
