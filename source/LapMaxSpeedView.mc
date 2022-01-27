@@ -1,10 +1,12 @@
 import Toybox.Activity;
+import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.Time;
 import Toybox.WatchUi;
 
-class LapMaxSpeedView extends WatchUi.SimpleDataField {
+class LapMaxSpeedView extends WatchUi.DataField {
 
+    hidden var label;
     hidden var _M_previous;
     hidden var _M_elapsed;
     hidden var _M_paused;
@@ -14,6 +16,11 @@ class LapMaxSpeedView extends WatchUi.SimpleDataField {
     hidden var _current_lap = 0;
     const MAX_SPEED_CHECK = 2000;
     const DEFAULT_AVG_PERIOD = 10;
+    const TEST_LAYOUT = false;
+    const XSHIM = 32;
+    const XSHIM_OBSCURE = 25;
+    const YSHIM_MAX = 12;
+    const YSHIM_MAXAVG = 7;
 
     class AveragingBoundedArray {
         hidden var _size as Number;
@@ -79,7 +86,7 @@ class LapMaxSpeedView extends WatchUi.SimpleDataField {
 
     // Set the label of the data field here.
     function initialize() {
-        SimpleDataField.initialize();
+        DataField.initialize();
         setAppLabel();
         _M_paused = false;
         _M_stopped = true; 
@@ -104,10 +111,10 @@ class LapMaxSpeedView extends WatchUi.SimpleDataField {
 
 /*
     function onStart(state) {
-        SimpleDataField.onStart(state);
+        DataField.onStart(state);
         Position.enableLocationEvents(Position.LOCATION_CONTINUOUS, method(:onPosition));
     }
-*/
+    */
 
     function onTimerPause() {
         System.println("Pause");
@@ -151,139 +158,181 @@ class LapMaxSpeedView extends WatchUi.SimpleDataField {
 
     function speedToKmh(s as Lang.Float or Null) {
         if (s == null) {
-                s = 0;
+            return "-";
         }
         return (s * 3.6).format("%0.1f");
     }
 
-    function formatOutput(s as Lang.Float or Lang.String or Null, s10s as Lang.Float or Lang.String or Null, t as Lang.Float or Lang.Number or Lang.String or Null, t10s as Lang.Float or Lang.Number or Lang.String or Null) as String {
-        var o = "";
-        if (s == null or s instanceof Lang.Float) {
-                o += speedToKmh(s);
+   // Set your layout here. Anytime the size of obscurity of
+    // the draw context is changed this will be called.
+    function onLayout(dc as Dc) as Void {
+        var obscurityFlags = DataField.getObscurityFlags();
+
+        View.setLayout(Rez.Layouts.MainLayout(dc));
+        var labelView = View.findDrawableById("label");
+        labelView.locY = labelView.locY - 16;
+        var valueView = View.findDrawableById("value");
+        valueView.locY = valueView.locY - YSHIM_MAX;
+        valueView = View.findDrawableById("value_cur_max");
+        valueView.locX = valueView.locX - XSHIM;
+        valueView.locY = valueView.locY - YSHIM_MAX;
+        valueView = View.findDrawableById("value_cur_maxavg");
+        valueView.locX = valueView.locX - XSHIM;
+        valueView.locY = valueView.locY + YSHIM_MAXAVG;
+        valueView = View.findDrawableById("value_last_max");
+        valueView.locX = valueView.locX + XSHIM;
+        valueView.locY = valueView.locY - YSHIM_MAX;
+        valueView = View.findDrawableById("value_last_maxavg");
+        valueView.locX = valueView.locX + XSHIM;
+        valueView.locY = valueView.locY + YSHIM_MAXAVG;
+        valueView = View.findDrawableById("value_avgwindow");
+        valueView.locY = valueView.locY + YSHIM_MAXAVG;
+
+/*
+        // Top left quadrant so we'll use the top left layout
+        if (obscurityFlags == (OBSCURE_TOP | OBSCURE_LEFT)) {
+            valueView = View.findDrawableById("value_cur_max");
+            valueView.locX = valueView.locX + XSHIM_OBSCURE;
+            valueView = View.findDrawableById("value_cur_maxavg");
+            valueView.locX = valueView.locX + XSHIM_OBSCURE;
+            valueView = View.findDrawableById("value_last_max");
+            valueView.setFont(Graphics.FONT_SYSTEM_XTINY);
+            valueView = View.findDrawableById("value_last_maxavg");
+            valueView.setFont(Graphics.FONT_SYSTEM_XTINY);
+        // Top right quadrant so we'll use the top right layout
+        } else if (obscurityFlags == (OBSCURE_TOP | OBSCURE_RIGHT)) {
+
+        // Bottom left quadrant so we'll use the bottom left layout
+        } else if (obscurityFlags == (OBSCURE_BOTTOM | OBSCURE_LEFT)) {
+
+        // Bottom right quadrant so we'll use the bottom right layout
+        } else if (obscurityFlags == (OBSCURE_BOTTOM | OBSCURE_RIGHT)) {
+
         }
-        else if (s instanceof Lang.String) {
-                o += s;
-        }
-        else {
-            if (s has :toString) {
-                o += s.toString();
-            }
-            else {
-                o += "unknown";
-            }
-        }
-        o += " ";
-        if (s10s == null or s10s instanceof Lang.Float) {
-                o += speedToKmh(s10s);
-        }
-        else if (s10s instanceof Lang.String) {
-                o += s10s;
-        }
-        else {
-            if (s10s has :toString) {
-                o += s10s.toString();
-            }
-            else {
-                o += "unknown";
-            }
-        }
-        o += " ";
-        if (t == null) {}
-        // info.currentSpeed is Lang.Float
-        else if (t instanceof Lang.Float) {
-                o += speedToKmh(t);
-        }
-        // results of System.getTimer() are Lang.Number
-        else if (t instanceof Lang.Number) {
-                var diff = new Time.Duration(t / 1000);
-                o += diff.value();
-        }
-        else if (t instanceof Lang.String) {
-                o += t;
-        }
-        else {
-            if (t has :toString) {
-                o += t.toString();
-            }
-            else {
-                o += "unknown";
-            }
-        }
-        o += " ";
-        if (t10s == null or t10s instanceof Lang.Float) {
-                o += speedToKmh(t10s);
-        }
-        else if (t10s instanceof Lang.String) {
-                o += t10s;
-        }
-        else {
-            if (t10s has :toString) {
-                o += t10s.toString();
-            }
-            else {
-                o += "unknown";
-            }
-        }
-        return o;
+        */
+
+        //(View.findDrawableById("label") as Text).setText(label);
     }
 
-    function valToDash(v) {
-        if (v == null) {
-            return "-";
+    // once a second when the data field is visible.
+    function onUpdate(dc as Dc) as Void {
+        // Set the background color
+        (View.findDrawableById("Background") as Text).setColor(getBackgroundColor());
+
+        // Set the foreground color and value
+        var labelView = View.findDrawableById("label") as Text;
+        var value = View.findDrawableById("value") as Text;
+        var value_cur_max = View.findDrawableById("value_cur_max") as Text;
+        var value_cur_maxavg = View.findDrawableById("value_cur_maxavg") as Text;
+        var value_last_max = View.findDrawableById("value_last_max") as Text;
+        var value_last_maxavg = View.findDrawableById("value_last_maxavg") as Text;
+        var value_avgwindow = View.findDrawableById("value_avgwindow") as Text;
+
+        if (getBackgroundColor() == Graphics.COLOR_BLACK) {
+            value.setColor(Graphics.COLOR_WHITE);
+            value_cur_max.setColor(Graphics.COLOR_WHITE);
+            value_cur_maxavg.setColor(Graphics.COLOR_WHITE);
+            value_last_max.setColor(Graphics.COLOR_LT_GRAY);
+            value_last_maxavg.setColor(Graphics.COLOR_LT_GRAY);
+            value_avgwindow.setColor(Graphics.COLOR_DK_GRAY);
+        } else {
+            value.setColor(Graphics.COLOR_BLACK);
+            value_cur_max.setColor(Graphics.COLOR_BLACK);
+            value_cur_maxavg.setColor(Graphics.COLOR_BLACK);
+            value_last_max.setColor(Graphics.COLOR_DK_GRAY);
+            value_last_maxavg.setColor(Graphics.COLOR_DK_GRAY);
+            value_avgwindow.setColor(Graphics.COLOR_LT_GRAY);
+        }
+
+        if (TEST_LAYOUT) {
+            value.setText("");
+            value_cur_max.setText("999.9");
+            value_cur_maxavg.setText("999.8");
+            value_last_max.setText("998.8");
+            value_last_maxavg.setText("988.8");
+            value_avgwindow.setText("120s");
         }
         else {
-            return (v);
+            if (_M_paused || _M_stopped) {
+                if (_lap_max_speed == null && _lastlap_max_speed == null) {
+                    value_cur_max.setText("");
+                    value_cur_maxavg.setText("");
+                    value_last_max.setText("");
+                    value_last_maxavg.setText("");
+                    value_avgwindow.setText("");
+                    labelView.setText(label);
+                    value.setText("ready to start");
+                }
+                else if (_lap_max_speed == null && _lastlap_max_speed != null) {
+                    labelView.setText("");
+                    value.setText("");
+                    value_avgwindow.setText("");
+                    value_cur_max.setText("");
+                    value_cur_maxavg.setText("stopped");
+                    value_last_max.setText(speedToKmh(_lastlap_max_speed));
+                    value_last_maxavg.setText(speedToKmh(_lastlap_maxfloatavg_speed));
+                }
+                else {
+                    labelView.setText("");
+                    value.setText("");
+                    value_avgwindow.setText("");
+                    value_cur_max.setText(speedToKmh(_lap_max_speed));
+                    value_cur_maxavg.setText(speedToKmh(_lap_maxfloatavg_speed));
+                    value_last_max.setText("");
+                    value_last_maxavg.setText("stopped");
+                }
+            }
+            else {
+                    labelView.setText("");
+                    value.setText("");
+                    value_avgwindow.setText(_lap_speed_array.getSize().format("%3d")+"s");
+                    value_cur_max.setText(speedToKmh(_lap_max_speed));
+                    value_cur_maxavg.setText(speedToKmh(_lap_maxfloatavg_speed));
+                    value_last_max.setText(speedToKmh(_lastlap_max_speed));
+                    value_last_maxavg.setText(speedToKmh(_lastlap_maxfloatavg_speed));
+            }
         }
-    }
 
+ 
+        // label also needs to be updated regularly
+        View.findDrawableById("label").setText(label);
+ 
+        // Call parent's onUpdate(dc) to redraw the layout
+        View.onUpdate(dc);
+    }
 
     // The given info object contains all the current workout
     // information. Calculate a value and return it in this method.
     // Note that compute() and onUpdate() are asynchronous, and there is no
     // guarantee that compute() will be called before onUpdate().
-    function compute(info as Activity.Info) as Numeric or Duration or String or Null {
-        if (_M_paused || _M_stopped) {
-            if (_lap_max_speed == null && _lastlap_max_speed == null) {
-                return formatOutput("ready to start", "", "", "");
-            }
-            else if (_lap_max_speed == null && _lastlap_max_speed != null) {
-                return formatOutput("stopped", "", valToDash(_lastlap_max_speed), "");
-            }
-            else {
-                return formatOutput(valToDash(_lap_max_speed), valToDash(_lap_maxfloatavg_speed), "stopped", "");
-            }
-        }
+    function compute(info as Activity.Info) as Void {
+        if (!_M_paused && !_M_stopped) {
+            var s = info.currentSpeed;
+            System.println(speedToKmh(s));
 
-        var s = info.currentSpeed;
-        System.println(speedToKmh(s));
-
-        if (s < MAX_SPEED_CHECK) {
-            // this is basic sanity check - the sometimes this can generate non-sense values like 4763019.5
-            if (_lap_max_speed == null || _lap_max_speed < s) {
-                _lap_max_speed = s;
-            }
-        }
-
-        var current = System.getTimer();
-        if (_M_previous != null && _M_elapsed != null && current != null) {
-            _M_elapsed += (current - _M_previous);
-            _M_previous = current;
             if (s < MAX_SPEED_CHECK) {
-                _lap_speed_array.store(s);
+                // this is basic sanity check - the sometimes this can generate non-sense values like 4763019.5
+                if (_lap_max_speed == null || _lap_max_speed < s) {
+                    _lap_max_speed = s;
+                }
+            }
+
+            var current = System.getTimer();
+            if (_M_previous != null && _M_elapsed != null && current != null) {
+                _M_elapsed += (current - _M_previous);
+                _M_previous = current;
+                if (s < MAX_SPEED_CHECK) {
+                    _lap_speed_array.store(s);
+                }
+            }
+
+            var lastRunningAvg = _lap_speed_array.getAverage();
+            if (lastRunningAvg != null) {
+                if (_lap_maxfloatavg_speed == null || lastRunningAvg > _lap_maxfloatavg_speed) {
+                    _lap_maxfloatavg_speed = lastRunningAvg;
+                }
             }
         }
-
-        var lastRunningAvg = _lap_speed_array.getAverage();
-        if (lastRunningAvg != null) {
-            if (_lap_maxfloatavg_speed == null || lastRunningAvg > _lap_maxfloatavg_speed) {
-                _lap_maxfloatavg_speed = lastRunningAvg;
-            }
-        }
-
-        //System.println("_M_elapsed=" + _M_elapsed);
-        //System.println("_M_previous=" + _M_previous);
-
-        return formatOutput(valToDash(_lap_max_speed), valToDash(_lap_maxfloatavg_speed), valToDash(_lastlap_max_speed), valToDash(_lastlap_maxfloatavg_speed));
     }
 
 }
