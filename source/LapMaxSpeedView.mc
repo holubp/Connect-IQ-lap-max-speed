@@ -6,10 +6,8 @@ import Toybox.WatchUi;
 
 class LapMaxSpeedView extends WatchUi.DataField {
 
-    hidden var appVersion = "1.2";
+    hidden var appVersion = "1.2.4";
     hidden var label;
-    hidden var _M_previous;
-    hidden var _M_elapsed;
     hidden var _M_paused;
     hidden var _M_stopped; 
     hidden var _lap_max_speed;
@@ -17,8 +15,8 @@ class LapMaxSpeedView extends WatchUi.DataField {
     hidden var _current_lap = 0;
     hidden var MAX_SPEED_CHECK as Number = 2000;
     //hidden var TEST_LAYOUT = false;
-    hidden var YSHIM_MAX as Number = 13;
-    hidden var YSHIM_MAXAVG as Number = 10;
+    //hidden var YSHIM_MAX as Number = 13;
+    //hidden var YSHIM_MAXAVG as Number = 10;
 
     class AveragingBoundedArray {
         hidden var _size as Number;
@@ -74,7 +72,9 @@ class LapMaxSpeedView extends WatchUi.DataField {
 
     hidden var layoutInitialized as Boolean = false;
     hidden var dynMainXShim;
+    hidden var dynMainYShim = 13;
     hidden var dynSubXShim;
+    hidden var dynSubYShim = 10;
     hidden var showLastLap = true;
     hidden var showAvgWindow = true;
 
@@ -110,14 +110,11 @@ class LapMaxSpeedView extends WatchUi.DataField {
     function onTimerResume() {
         //System.println("Resume");
         _M_paused = false;
-        _M_previous = System.getTimer();
     }
 
     function onTimerStart() {
         //System.println("Start");
         _M_stopped = false;
-        _M_previous = System.getTimer();
-        _M_elapsed = 0;
     }
 
     function onTimerStop() {
@@ -127,8 +124,6 @@ class LapMaxSpeedView extends WatchUi.DataField {
 
     function onTimerLap() {
         //System.println("Lap");
-        _M_previous = System.getTimer();
-        _M_elapsed = 0;
         _current_lap++;
         _lastlap_max_speed = _lap_max_speed;
         _lastlap_maxfloatavg_speed = _lap_maxfloatavg_speed;
@@ -136,11 +131,6 @@ class LapMaxSpeedView extends WatchUi.DataField {
         _lap_maxfloatavg_speed = null;
         _lap_speed_array.clear();
     }
-
-    function onTimerReset() {
-        //System.println("Reset");
-        _M_elapsed = null;
-    } 
 
     function speedToKmh(s as Lang.Float or Null) {
         if (s == null) {
@@ -155,23 +145,23 @@ class LapMaxSpeedView extends WatchUi.DataField {
 
     function shimValues(cur_max as Number, cur_maxavg as Number, last_max as Number, last_maxavg as Number, value_avgwindow as Number) {
         var valueView;
-        valueView = View.findDrawableById("value");
-        valueView.locY = valueView.locY - YSHIM_MAX;
+        //valueView = View.findDrawableById("value");
+        //valueView.locY = valueView.locY - dynMainYShim;
         valueView = View.findDrawableById("value_cur_max");
         valueView.locX = valueView.locX + cur_max;
-        valueView.locY = valueView.locY - YSHIM_MAX;
+        valueView.locY = valueView.locY - dynMainYShim;
         valueView = View.findDrawableById("value_cur_maxavg");
         valueView.locX = valueView.locX + cur_maxavg;
-        valueView.locY = valueView.locY + YSHIM_MAXAVG;
+        valueView.locY = valueView.locY + dynSubYShim;
         valueView = View.findDrawableById("value_last_max");
         valueView.locX = valueView.locX + last_max;
-        valueView.locY = valueView.locY - YSHIM_MAX;
+        valueView.locY = valueView.locY - dynMainYShim;
         valueView = View.findDrawableById("value_last_maxavg");
         valueView.locX = valueView.locX + last_maxavg;
-        valueView.locY = valueView.locY + YSHIM_MAXAVG;
+        valueView.locY = valueView.locY + dynSubYShim;
         valueView = View.findDrawableById("value_avgwindow");
         valueView.locX = valueView.locX + value_avgwindow;
-        valueView.locY = valueView.locY + YSHIM_MAXAVG;
+        valueView.locY = valueView.locY + dynSubYShim;
     }
 
     function initLayout(dc as Dc) as Void {
@@ -181,6 +171,8 @@ class LapMaxSpeedView extends WatchUi.DataField {
         var subTextComponentDimensions = dc.getTextDimensions("887.8", Graphics.FONT_XTINY);
         dynMainXShim = ( (optimumMainTextDimensions[0] / 2) - (mainTextComponentDimensions[0] / 2)).toNumber();
         dynSubXShim = ( (optimumSubTextDimensions[0] / 2) - (subTextComponentDimensions[0] / 2)).toNumber();
+        dynMainYShim = ( (mainTextComponentDimensions[1] / 2 )).toNumber();
+        dynSubYShim = ( (subTextComponentDimensions[1] / 2)).toNumber();
 
         if (optimumSubTextDimensions[0] > dc.getWidth()) {
             optimumSubTextDimensions = dc.getTextDimensions("887.8  888.8", Graphics.FONT_XTINY);
@@ -326,22 +318,14 @@ class LapMaxSpeedView extends WatchUi.DataField {
     function compute(info as Activity.Info) as Void {
         if (!_M_paused && !_M_stopped) {
             var s = info.currentSpeed;
-            //System.println(speedToKmh(s));
+            System.println(speedToKmh(s));
 
-            if (s < MAX_SPEED_CHECK) {
+            if (s != null && s < MAX_SPEED_CHECK.toFloat()) {
                 // this is basic sanity check - the sometimes this can generate non-sense values like 4763019.5
                 if (_lap_max_speed == null || _lap_max_speed < s) {
                     _lap_max_speed = s;
                 }
-            }
-
-            var current = System.getTimer();
-            if (_M_previous != null && _M_elapsed != null && current != null) {
-                _M_elapsed += (current - _M_previous);
-                _M_previous = current;
-                if (s < MAX_SPEED_CHECK) {
-                    _lap_speed_array.store(s);
-                }
+                _lap_speed_array.store(s);
             }
 
             var lastRunningAvg = _lap_speed_array.getAverage();
