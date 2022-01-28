@@ -19,6 +19,7 @@ Known issues:
 - The four numbers can start overflowing and get truncated when more fields are displayed in some screen configurations and the overflow detection does not work for me well enough.
 - Backcountry skiing app (by Garmin) unfortunately uses Lap key for switching ascent/descent modes and does not generate new lap after this transition on some Fenix 6X firmwares.
 - Layout has been optimized on Fenix 6X an further tweeks might be needed for other devices.
+- New dynamic layout may run out of memory on Fenix 3/HR devices, which are limited to 16kB. Needs further investigation if we have to disable compatiblity with these.
 
 Other bugs and issues can be reported via GitHub Issues.
 
