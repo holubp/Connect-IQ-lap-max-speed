@@ -6,6 +6,7 @@ import Toybox.WatchUi;
 
 class LapMaxSpeedView extends WatchUi.DataField {
 
+    hidden var appVersion = "1.1";
     hidden var label;
     hidden var _M_previous;
     hidden var _M_elapsed;
@@ -19,8 +20,8 @@ class LapMaxSpeedView extends WatchUi.DataField {
     const TEST_LAYOUT = false;
     const XSHIM = 32;
     const XSHIM_OBSCURE = 25;
-    const YSHIM_MAX = 12;
-    const YSHIM_MAXAVG = 7;
+    const YSHIM_MAX = 13;
+    const YSHIM_MAXAVG = 10;
 
     class AveragingBoundedArray {
         hidden var _size as Number;
@@ -75,13 +76,25 @@ class LapMaxSpeedView extends WatchUi.DataField {
     hidden var _lastlap_maxfloatavg_speed;
 
     function setAppLabel() {
-        var appVersion = Application.Properties.getValue("appVersion");
         if (appVersion != null && appVersion != "") {
             label = "Lap max speed v" + appVersion;
         }
         else {
             label = "Lap max speed";
         }
+    }
+
+    function getPropertyValue(name as String) as String or Null {
+        try {
+            if (Application has :Properties) {
+                return Application.Properties.getValue(name);
+            }
+            else if (Application has :getApp) {
+                return Application.getApp().getProperty(name);
+            }
+        }
+        catch (ex) {}
+        return null;
     }
 
     // Set the label of the data field here.
@@ -91,7 +104,7 @@ class LapMaxSpeedView extends WatchUi.DataField {
         _M_paused = false;
         _M_stopped = true; 
 
-        var lap_speed_array_size = Application.Properties.getValue("avgPeriod");
+        var lap_speed_array_size = getPropertyValue("avgPeriod");
         if (lap_speed_array_size != null && lap_speed_array_size > 0) {
             _lap_speed_array = new AveragingBoundedArray(lap_speed_array_size);
         }

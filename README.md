@@ -17,11 +17,14 @@ This data field makes for the lack of per-lap maximum speed available among avai
 
 Known issues: 
 - The four numbers can start overflowing and get truncated when more fields are displayed in some screen configurations and the overflow detection does not work for me well enough.
-- Backcountry skiing app (by Garmin) unfortunately uses Lap key for switching ascent/descent modes and does not generate new lap after this transition and hence one does not get maximum speeds per lap (this is not a problem with the data field, but property of the Backcountry skiing app).
+- Backcountry skiing app (by Garmin) unfortunately uses Lap key for switching ascent/descent modes and does not generate new lap after this transition on some Fenix 6X firmwares.
+- Layout has been optimized on Fenix 6X an further tweeks might be needed for other devices.
 
 Other bugs and issues can be reported via GitHub Issues.
 
 ## What’s New
+1.1:
+- fixed correct retrieval of properties on older devices.
 1.0:
 - transition to full DataField instead of SimpleDataField, allowing better layout of numbers.
 0.7:
