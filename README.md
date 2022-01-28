@@ -23,6 +23,8 @@ Known issues:
 Other bugs and issues can be reported via GitHub Issues.
 
 ## What’s New
+1.2:
+- improved dynamic layout of the data field
 1.1:
 - fixed correct retrieval of properties on older devices.
 1.0:

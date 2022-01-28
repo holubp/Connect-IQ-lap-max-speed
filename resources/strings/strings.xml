@@ -1,5 +1,5 @@
 <strings>
     <string id="AppName">LapMaxSpeed</string>
     <string id="avgPeriodTitle">Maxspeed averaging period in seconds</string>
-    <string id="avgPeriodError">Maxspeed averaging period must be within 1-120s (1s means effectively turning off averaging)</string>
+    <string id="avgPeriodError">Maxspeed averaging period must be within 1-120s</string>
 </strings>

@@ -6,7 +6,7 @@ import Toybox.WatchUi;
 
 class LapMaxSpeedView extends WatchUi.DataField {
 
-    hidden var appVersion = "1.1";
+    hidden var appVersion = "1.2";
     hidden var label;
     hidden var _M_previous;
     hidden var _M_elapsed;
@@ -15,17 +15,15 @@ class LapMaxSpeedView extends WatchUi.DataField {
     hidden var _lap_max_speed;
     hidden var _lastlap_max_speed;
     hidden var _current_lap = 0;
-    const MAX_SPEED_CHECK = 2000;
-    const DEFAULT_AVG_PERIOD = 10;
-    const TEST_LAYOUT = false;
-    const XSHIM = 32;
-    const XSHIM_OBSCURE = 25;
-    const YSHIM_MAX = 13;
-    const YSHIM_MAXAVG = 10;
+    hidden var MAX_SPEED_CHECK as Number = 2000;
+    hidden var DEFAULT_AVG_PERIOD as Number = 120;
+    hidden var TEST_LAYOUT = false;
+    hidden var YSHIM_MAX as Number = 13;
+    hidden var YSHIM_MAXAVG as Number = 10;
 
     class AveragingBoundedArray {
         hidden var _size as Number;
-        hidden var _array;
+        hidden var _array as Array<Float>;
         hidden var _current_index as Number;
         hidden var _initialized_size as Number;
         
@@ -75,14 +73,15 @@ class LapMaxSpeedView extends WatchUi.DataField {
     hidden var _lap_maxfloatavg_speed;
     hidden var _lastlap_maxfloatavg_speed;
 
-    function setAppLabel() {
-        if (appVersion != null && appVersion != "") {
-            label = "Lap max speed v" + appVersion;
-        }
-        else {
-            label = "Lap max speed";
-        }
-    }
+    hidden var obscurityFlags;
+    hidden var optimumMainTextDimensions;
+    hidden var mainTextComponentDimensions;
+    hidden var optimumSubTextDimensions;
+    hidden var subTextComponentDimensions;
+    hidden var dynMainXShim;
+    hidden var dynSubXShim;
+    hidden var showLastLap = true;
+    hidden var showAvgWindow = true;
 
     function getPropertyValue(name as String) as String or Null {
         try {
@@ -100,7 +99,7 @@ class LapMaxSpeedView extends WatchUi.DataField {
     // Set the label of the data field here.
     function initialize() {
         DataField.initialize();
-        setAppLabel();
+        label = "Lap max speed" + (appVersion != null && appVersion != "") ? " v" + appVersion : "";
         _M_paused = false;
         _M_stopped = true; 
 
@@ -113,14 +112,17 @@ class LapMaxSpeedView extends WatchUi.DataField {
         }
     }
 
+    // This does not work properly during the training anyway, disabling
+    /*
     function onSettingsChanged() {
-        var new_size = Application.Properties.getValue("avgPeriod");
+        var new_size = getPropertyValue("avgPeriod");
         if (new_size != null && new_size > 0 && new_size != _lap_speed_array.getSize()) {
             System.println("Reinitializing _lap_speed_array from " + _lap_speed_array.getSize() + " to " + new_size);
             _lap_speed_array = new AveragingBoundedArray(new_size);
         }
         setAppLabel();
     }
+    */
 
 /*
     function onStart(state) {
@@ -130,30 +132,30 @@ class LapMaxSpeedView extends WatchUi.DataField {
     */
 
     function onTimerPause() {
-        System.println("Pause");
+        //System.println("Pause");
         _M_paused = true;
     }
 
     function onTimerResume() {
-        System.println("Resume");
+        //System.println("Resume");
         _M_paused = false;
         _M_previous = System.getTimer();
     }
 
     function onTimerStart() {
-        System.println("Start");
+        //System.println("Start");
         _M_stopped = false;
         _M_previous = System.getTimer();
         _M_elapsed = 0;
     }
 
     function onTimerStop() {
-        System.println("Stop");
+        //System.println("Stop");
         _M_stopped = true;
     }
 
     function onTimerLap() {
-        System.println("Lap");
+        //System.println("Lap");
         _M_previous = System.getTimer();
         _M_elapsed = 0;
         _current_lap++;
@@ -165,7 +167,7 @@ class LapMaxSpeedView extends WatchUi.DataField {
     }
 
     function onTimerReset() {
-        System.println("Reset");
+        //System.println("Reset");
         _M_elapsed = null;
     } 
 
@@ -176,53 +178,169 @@ class LapMaxSpeedView extends WatchUi.DataField {
         return (s * 3.6).format("%0.1f");
     }
 
-   // Set your layout here. Anytime the size of obscurity of
+    function getMaximum(a as Number, b as Number) as Number {
+        return (a > b) ? a : b;
+    }
+
+    function shimValues(cur_max as Number, cur_maxavg as Number, last_max as Number, last_maxavg as Number, value_avgwindow as Number) {
+        var valueView;
+        valueView = View.findDrawableById("value");
+        valueView.locY = valueView.locY - YSHIM_MAX;
+        valueView = View.findDrawableById("value_cur_max");
+        valueView.locX = valueView.locX + cur_max;
+        valueView.locY = valueView.locY - YSHIM_MAX;
+        valueView = View.findDrawableById("value_cur_maxavg");
+        valueView.locX = valueView.locX + cur_maxavg;
+        valueView.locY = valueView.locY + YSHIM_MAXAVG;
+        valueView = View.findDrawableById("value_last_max");
+        valueView.locX = valueView.locX + last_max;
+        valueView.locY = valueView.locY - YSHIM_MAX;
+        valueView = View.findDrawableById("value_last_maxavg");
+        valueView.locX = valueView.locX + last_maxavg;
+        valueView.locY = valueView.locY + YSHIM_MAXAVG;
+        valueView = View.findDrawableById("value_avgwindow");
+        valueView.locX = valueView.locX + value_avgwindow;
+        valueView.locY = valueView.locY + YSHIM_MAXAVG;
+    }
+
+    // Set your layout here. Anytime the size of obscurity of
     // the draw context is changed this will be called.
     function onLayout(dc as Dc) as Void {
-        var obscurityFlags = DataField.getObscurityFlags();
+        obscurityFlags = DataField.getObscurityFlags();
+        optimumMainTextDimensions = dc.getTextDimensions("888.8  888.8", Graphics.FONT_TINY);
+        mainTextComponentDimensions = dc.getTextDimensions("888.8", Graphics.FONT_TINY);
+        optimumSubTextDimensions = dc.getTextDimensions("888.8 888s 888.8", Graphics.FONT_XTINY);
+        subTextComponentDimensions = dc.getTextDimensions("888.8", Graphics.FONT_XTINY);
+        dynMainXShim = ( (optimumMainTextDimensions[0] / 2) - (mainTextComponentDimensions[0] / 2)).toNumber();
+        dynSubXShim = ( (optimumSubTextDimensions[0] / 2) - (subTextComponentDimensions[0] / 2)).toNumber();
+
+        showLastLap = true;
+        showAvgWindow = true;
+        if (optimumSubTextDimensions[0] > dc.getWidth()) {
+            optimumSubTextDimensions = dc.getTextDimensions("888.8  888.8", Graphics.FONT_XTINY);
+            showAvgWindow = false;
+            dynSubXShim = ( (optimumSubTextDimensions[0] / 2) - (subTextComponentDimensions[0] / 2)).toNumber();
+        }
+        dynMainXShim = getMaximum(dynMainXShim, dynSubXShim);
+        dynSubXShim = dynMainXShim;
+        if (optimumMainTextDimensions[0] > dc.getWidth()) {
+            optimumMainTextDimensions = dc.getTextDimensions("888.8", Graphics.FONT_TINY);
+            optimumSubTextDimensions = dc.getTextDimensions("888.8 888s", Graphics.FONT_XTINY);
+            showLastLap = false;
+            dynMainXShim = 0;
+            dynSubXShim = ((optimumSubTextDimensions[0] - subTextComponentDimensions[0])/2).toNumber();
+        }
 
         View.setLayout(Rez.Layouts.MainLayout(dc));
         var labelView = View.findDrawableById("label");
         labelView.locY = labelView.locY - 22;
-        var valueView = View.findDrawableById("value");
-        valueView.locY = valueView.locY - YSHIM_MAX;
-        valueView = View.findDrawableById("value_cur_max");
-        valueView.locX = valueView.locX - XSHIM;
-        valueView.locY = valueView.locY - YSHIM_MAX;
-        valueView = View.findDrawableById("value_cur_maxavg");
-        valueView.locX = valueView.locX - XSHIM;
-        valueView.locY = valueView.locY + YSHIM_MAXAVG;
-        valueView = View.findDrawableById("value_last_max");
-        valueView.locX = valueView.locX + XSHIM;
-        valueView.locY = valueView.locY - YSHIM_MAX;
-        valueView = View.findDrawableById("value_last_maxavg");
-        valueView.locX = valueView.locX + XSHIM;
-        valueView.locY = valueView.locY + YSHIM_MAXAVG;
-        valueView = View.findDrawableById("value_avgwindow");
-        valueView.locY = valueView.locY + YSHIM_MAXAVG;
+        var valueView;
 
-/*
         // Top left quadrant so we'll use the top left layout
-        if (obscurityFlags == (OBSCURE_TOP | OBSCURE_LEFT)) {
+        if (obscurityFlags == (OBSCURE_TOP | OBSCURE_LEFT) || (obscurityFlags == OBSCURE_LEFT) ) {
+            showLastLap = false;
+            showAvgWindow = true;
+            valueView = View.findDrawableById("value");
+            valueView.locY = valueView.locY - YSHIM_MAX;
             valueView = View.findDrawableById("value_cur_max");
-            valueView.locX = valueView.locX + XSHIM_OBSCURE;
+            valueView.locY = valueView.locY - YSHIM_MAX;
             valueView = View.findDrawableById("value_cur_maxavg");
-            valueView.locX = valueView.locX + XSHIM_OBSCURE;
+            valueView.locY = valueView.locY + YSHIM_MAXAVG;
             valueView = View.findDrawableById("value_last_max");
-            valueView.setFont(Graphics.FONT_SYSTEM_XTINY);
+            valueView.locY = valueView.locY - YSHIM_MAX;
             valueView = View.findDrawableById("value_last_maxavg");
-            valueView.setFont(Graphics.FONT_SYSTEM_XTINY);
-        // Top right quadrant so we'll use the top right layout
-        } else if (obscurityFlags == (OBSCURE_TOP | OBSCURE_RIGHT)) {
-
-        // Bottom left quadrant so we'll use the bottom left layout
-        } else if (obscurityFlags == (OBSCURE_BOTTOM | OBSCURE_LEFT)) {
-
-        // Bottom right quadrant so we'll use the bottom right layout
-        } else if (obscurityFlags == (OBSCURE_BOTTOM | OBSCURE_RIGHT)) {
-
+            valueView.locY = valueView.locY + YSHIM_MAXAVG;
+            valueView = View.findDrawableById("value_avgwindow");
+            valueView.locX = valueView.locX - dynSubXShim;
+            valueView.locY = valueView.locY + YSHIM_MAXAVG;
         }
-        */
+        // Top right quadrant so we'll use the top right layout
+        else if (obscurityFlags == (OBSCURE_TOP | OBSCURE_RIGHT) || (obscurityFlags == OBSCURE_RIGHT)) {
+            showLastLap = false;
+            showAvgWindow = true;
+            valueView = View.findDrawableById("value");
+            valueView.locY = valueView.locY - YSHIM_MAX;
+            valueView = View.findDrawableById("value_cur_max");
+            valueView.locY = valueView.locY - YSHIM_MAX;
+            valueView = View.findDrawableById("value_cur_maxavg");
+            valueView.locY = valueView.locY + YSHIM_MAXAVG;
+            valueView = View.findDrawableById("value_last_max");
+            valueView.locY = valueView.locY - YSHIM_MAX;
+            valueView = View.findDrawableById("value_last_maxavg");
+            valueView.locY = valueView.locY + YSHIM_MAXAVG;
+            valueView = View.findDrawableById("value_avgwindow");
+            valueView.locX = valueView.locX + dynSubXShim;
+            valueView.locY = valueView.locY + YSHIM_MAXAVG;
+        }
+        // Bottom left quadrant so we'll use the bottom left layout
+        else if (obscurityFlags == (OBSCURE_BOTTOM | OBSCURE_LEFT)) {
+            showLastLap = false;
+            showAvgWindow = false;
+            valueView = View.findDrawableById("value");
+            valueView.locY = valueView.locY - YSHIM_MAX;
+            valueView = View.findDrawableById("value_cur_max");
+            valueView.locY = valueView.locY - YSHIM_MAX;
+            valueView = View.findDrawableById("value_cur_maxavg");
+            valueView.locY = valueView.locY + YSHIM_MAXAVG;
+            valueView = View.findDrawableById("value_last_max");
+            valueView.locY = valueView.locY - YSHIM_MAX;
+            valueView = View.findDrawableById("value_last_maxavg");
+            valueView.locY = valueView.locY + YSHIM_MAXAVG;
+            valueView = View.findDrawableById("value_avgwindow");
+            valueView.locY = valueView.locY + YSHIM_MAXAVG;
+        }
+        // Bottom right quadrant so we'll use the bottom right layout
+        else if (obscurityFlags == (OBSCURE_BOTTOM | OBSCURE_RIGHT)) {
+            showLastLap = false;
+            showAvgWindow = false;
+            valueView = View.findDrawableById("value");
+            valueView.locY = valueView.locY - YSHIM_MAX;
+            valueView = View.findDrawableById("value_cur_max");
+            valueView.locY = valueView.locY - YSHIM_MAX;
+            valueView = View.findDrawableById("value_cur_maxavg");
+            valueView.locY = valueView.locY + YSHIM_MAXAVG;
+            valueView = View.findDrawableById("value_last_max");
+            valueView.locY = valueView.locY - YSHIM_MAX;
+            valueView = View.findDrawableById("value_last_maxavg");
+            valueView.locY = valueView.locY + YSHIM_MAXAVG;
+            valueView = View.findDrawableById("value_avgwindow");
+            valueView.locY = valueView.locY + YSHIM_MAXAVG;
+        }
+        else {
+            if (!showLastLap) {
+                valueView = View.findDrawableById("value");
+                valueView.locY = valueView.locY - YSHIM_MAX;
+                valueView = View.findDrawableById("value_cur_max");
+                valueView.locY = valueView.locY - YSHIM_MAX;
+                valueView = View.findDrawableById("value_cur_maxavg");
+                valueView.locY = valueView.locY + YSHIM_MAXAVG;
+                valueView = View.findDrawableById("value_last_max");
+                valueView.locY = valueView.locY - YSHIM_MAX;
+                valueView = View.findDrawableById("value_last_maxavg");
+                valueView.locY = valueView.locY + YSHIM_MAXAVG;
+                valueView = View.findDrawableById("value_avgwindow");
+                valueView.locX = valueView.locX + dynSubXShim;
+                valueView.locY = valueView.locY + YSHIM_MAXAVG;
+            }
+            else {
+                valueView = View.findDrawableById("value");
+                valueView.locY = valueView.locY - YSHIM_MAX;
+                valueView = View.findDrawableById("value_cur_max");
+                valueView.locX = valueView.locX - dynMainXShim;
+                valueView.locY = valueView.locY - YSHIM_MAX;
+                valueView = View.findDrawableById("value_cur_maxavg");
+                valueView.locX = valueView.locX - dynSubXShim;
+                valueView.locY = valueView.locY + YSHIM_MAXAVG;
+                valueView = View.findDrawableById("value_last_max");
+                valueView.locX = valueView.locX + dynMainXShim;
+                valueView.locY = valueView.locY - YSHIM_MAX;
+                valueView = View.findDrawableById("value_last_maxavg");
+                valueView.locX = valueView.locX + dynSubXShim;
+                valueView.locY = valueView.locY + YSHIM_MAXAVG;
+                valueView = View.findDrawableById("value_avgwindow");
+                valueView.locY = valueView.locY + YSHIM_MAXAVG;
+            }
+        }
 
         //(View.findDrawableById("label") as Text).setText(label);
     }
@@ -261,9 +379,9 @@ class LapMaxSpeedView extends WatchUi.DataField {
             value.setText("");
             value_cur_max.setText("999.9");
             value_cur_maxavg.setText("999.8");
-            value_last_max.setText("998.8");
-            value_last_maxavg.setText("988.8");
-            value_avgwindow.setText("120s");
+            value_last_max.setText((showLastLap) ? "998.8" : "");
+            value_last_maxavg.setText((showLastLap) ? "988.8" : "");
+            value_avgwindow.setText((showAvgWindow) ? "120s" : "");
         }
         else {
             if (_M_paused || _M_stopped) {
@@ -279,30 +397,30 @@ class LapMaxSpeedView extends WatchUi.DataField {
                 else if (_lap_max_speed == null && _lastlap_max_speed != null) {
                     labelView.setText("");
                     value.setText("");
-                    value_avgwindow.setText("");
                     value_cur_max.setText("");
-                    value_cur_maxavg.setText("stopped");
-                    value_last_max.setText(speedToKmh(_lastlap_max_speed));
-                    value_last_maxavg.setText(speedToKmh(_lastlap_maxfloatavg_speed));
+                    value_cur_maxavg.setText((showLastLap) ? "" : "stopped");
+                    value_last_max.setText((showLastLap) ? speedToKmh(_lastlap_max_speed) : "");
+                    value_last_maxavg.setText((showLastLap) ? speedToKmh(_lastlap_maxfloatavg_speed) : "");
+                    value_avgwindow.setText((showLastLap) ? "stopped" : "");
                 }
                 else {
                     labelView.setText("");
                     value.setText("");
                     value_avgwindow.setText("");
                     value_cur_max.setText(speedToKmh(_lap_max_speed));
-                    value_cur_maxavg.setText(speedToKmh(_lap_maxfloatavg_speed));
-                    value_last_max.setText("");
-                    value_last_maxavg.setText("stopped");
+                    value_cur_maxavg.setText((showLastLap) ? speedToKmh(_lap_maxfloatavg_speed) : "stopped");
+                    value_last_max.setText((showLastLap) ? speedToKmh(_lastlap_max_speed) : "");
+                    value_last_maxavg.setText((showLastLap) ? "stopped" : "");
                 }
             }
             else {
                     labelView.setText("");
                     value.setText("");
-                    value_avgwindow.setText(_lap_speed_array.getSize().format("%3d")+"s");
+                    value_avgwindow.setText((showAvgWindow) ? _lap_speed_array.getSize().format("%3d")+"s" : "");
                     value_cur_max.setText(speedToKmh(_lap_max_speed));
                     value_cur_maxavg.setText(speedToKmh(_lap_maxfloatavg_speed));
-                    value_last_max.setText(speedToKmh(_lastlap_max_speed));
-                    value_last_maxavg.setText(speedToKmh(_lastlap_maxfloatavg_speed));
+                    value_last_max.setText((showLastLap) ? speedToKmh(_lastlap_max_speed) : "");
+                    value_last_maxavg.setText((showLastLap) ? speedToKmh(_lastlap_maxfloatavg_speed) : "");
             }
         }
 
@@ -317,7 +435,7 @@ class LapMaxSpeedView extends WatchUi.DataField {
     function compute(info as Activity.Info) as Void {
         if (!_M_paused && !_M_stopped) {
             var s = info.currentSpeed;
-            System.println(speedToKmh(s));
+            //System.println(speedToKmh(s));
 
             if (s < MAX_SPEED_CHECK) {
                 // this is basic sanity check - the sometimes this can generate non-sense values like 4763019.5
