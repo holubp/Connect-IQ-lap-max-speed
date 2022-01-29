@@ -24,6 +24,8 @@ Known issues:
 Other bugs and issues can be reported via GitHub Issues.
 
 ## What’s New
+1.4:
+- support for using km/h or mph based on device settings
 1.3:
 - recording of maximum speed floating average into the FIT file (needs FITContributor permission)
 1.2:

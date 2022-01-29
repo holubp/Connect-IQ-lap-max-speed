@@ -4,10 +4,11 @@ import Toybox.Lang;
 import Toybox.Time;
 import Toybox.WatchUi;
 import Toybox.FitContributor;
+import Toybox.System;
 
 class LapMaxSpeedView extends WatchUi.DataField {
 
-    hidden var appVersion = "1.3.2";
+    hidden var appVersion = "1.4";
     hidden var label;
     hidden var _M_paused;
     hidden var _M_stopped; 
@@ -18,7 +19,7 @@ class LapMaxSpeedView extends WatchUi.DataField {
     //hidden var TEST_LAYOUT = false;
     //hidden var YSHIM_MAX as Number = 13;
     //hidden var YSHIM_MAXAVG as Number = 10;
-    //hidden var speedMultipler = 3.6;
+    hidden var speedMultiplier = 3.6;
 
     class AveragingBoundedArray {
         hidden var _size as Number;
@@ -108,12 +109,16 @@ class LapMaxSpeedView extends WatchUi.DataField {
         }
         _lap_speed_array = new AveragingBoundedArray(lap_speed_array_size);
 
+        if (Toybox.System.DeviceSettings.paceUnits == System.UNIT_STATUTE) {
+            speedMultiplier = 2.23694;
+        }
+
         // Create the custom FIT data field we want to record.
         maxSpeedFloatAvgField = createField(
             "Max speed floatavg (" + lap_speed_array_size + "s)",
             0,
             FitContributor.DATA_TYPE_FLOAT,
-            {:mesgType=>FitContributor.MESG_TYPE_RECORD, :units=>"km/h"}
+            {:mesgType=>FitContributor.MESG_TYPE_RECORD, :units=> (speedMultiplier == 3.6) ? "km/h" : "mph"}
         );
         maxSpeedFloatAvgField.setData(0.0);
     }
@@ -152,7 +157,7 @@ class LapMaxSpeedView extends WatchUi.DataField {
         if (s == null) {
             return "-";
         }
-        return (s * 3.6).format("%0.1f");
+        return (s * speedMultiplier).format("%0.1f");
     }
 
     function getMaximum(a as Number, b as Number) as Number {
@@ -346,7 +351,7 @@ class LapMaxSpeedView extends WatchUi.DataField {
 
             var lastRunningAvg = _lap_speed_array.getAverage();
             if (lastRunningAvg != null) {
-                maxSpeedFloatAvgField.setData(lastRunningAvg * 3.6);
+                maxSpeedFloatAvgField.setData(lastRunningAvg * speedMultiplier);
                 if (_lap_maxfloatavg_speed == null || lastRunningAvg > _lap_maxfloatavg_speed) {
                     _lap_maxfloatavg_speed = lastRunningAvg;
                 }
