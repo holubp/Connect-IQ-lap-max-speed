@@ -2,4 +2,7 @@
     <string id="AppName">LapMaxSpeed</string>
     <string id="avgPeriodTitle">Maxspeed averaging period in seconds</string>
     <string id="avgPeriodError">Maxspeed averaging period must be within 1-120s</string>
+    <string id="speedfloatavg_label">Floating average speed</string>
+    <string id="speedfloatavg_units">km/h</string>
+    <string id="maxspeedfloatavg_label">Maximum floating average speed</string>
 </strings>

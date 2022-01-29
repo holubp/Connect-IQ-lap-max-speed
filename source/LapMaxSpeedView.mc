@@ -94,6 +94,8 @@ class LapMaxSpeedView extends WatchUi.DataField {
         return 0;
     }
 
+    hidden var _max_speed_floatavg;
+    hidden var speedFloatAvgField = null;
     hidden var maxSpeedFloatAvgField = null;
 
     // Set the label of the data field here.
@@ -113,12 +115,24 @@ class LapMaxSpeedView extends WatchUi.DataField {
             speedMultiplier = 2.23694;
         }
 
+        _max_speed_floatavg = 0.0;
         // Create the custom FIT data field we want to record.
-        maxSpeedFloatAvgField = createField(
-            "Max speed floatavg (" + lap_speed_array_size + "s)",
+        speedFloatAvgField = createField(
+            "speed_floatavg_" + lap_speed_array_size + "s",
             0,
             FitContributor.DATA_TYPE_FLOAT,
-            {:mesgType=>FitContributor.MESG_TYPE_RECORD, :units=> (speedMultiplier == 3.6) ? "km/h" : "mph"}
+            // I don't know yet how to make Connect use unit system flexibly based on user's preference - only fixed units possible AFAIK
+            // {:mesgType=>FitContributor.MESG_TYPE_RECORD, :units=> (speedMultiplier == 3.6) ? "km/h" : "mph"}
+            {:mesgType=>FitContributor.MESG_TYPE_RECORD, :units=> "km/h"}
+        );
+        speedFloatAvgField.setData(0.0);
+        maxSpeedFloatAvgField = createField(
+            "max_speed_floatavg_" + lap_speed_array_size + "s",
+            1,
+            FitContributor.DATA_TYPE_FLOAT,
+            // I don't know yet how to make Connect use unit system flexibly based on user's preference - only fixed units possible AFAIK
+            // {:mesgType=>FitContributor.MESG_TYPE_RECORD, :units=> (speedMultiplier == 3.6) ? "km/h" : "mph"}
+            {:mesgType=>FitContributor.MESG_TYPE_SESSION, :units=> "km/h"}
         );
         maxSpeedFloatAvgField.setData(0.0);
     }
@@ -351,7 +365,13 @@ class LapMaxSpeedView extends WatchUi.DataField {
 
             var lastRunningAvg = _lap_speed_array.getAverage();
             if (lastRunningAvg != null) {
-                maxSpeedFloatAvgField.setData(lastRunningAvg * speedMultiplier);
+                // I don't know yet how to make Connect use unit system flexibly based on user's preference - only fixed units possible AFAIK
+                //maxSpeedFloatAvgField.setData(lastRunningAvg * speedMultiplier);
+                speedFloatAvgField.setData(lastRunningAvg * 3.6);
+                if (_max_speed_floatavg < lastRunningAvg) {
+                    _max_speed_floatavg = lastRunningAvg;
+                    maxSpeedFloatAvgField.setData(_max_speed_floatavg * 3.6);
+                }
                 if (_lap_maxfloatavg_speed == null || lastRunningAvg > _lap_maxfloatavg_speed) {
                     _lap_maxfloatavg_speed = lastRunningAvg;
                 }

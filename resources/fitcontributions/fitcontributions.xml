@@ -1,0 +1,8 @@
+<fitContributions>
+    <fitField id="0" displayInChart="true" sortOrder = "0" precision="1"
+    chartTitle="@Strings.speedfloatavg_label" dataLabel="@Strings.speedfloatavg_label"
+    unitLabel="@Strings.speedfloatavg_units" fillColor="#1F9F12" />
+    <fitField id="1" displayInChart="false" sortOrder = "0" precision="1"
+    dataLabel="@Strings.maxspeedfloatavg_label"
+    unitLabel="@Strings.speedfloatavg_units" />
+</fitContributions>
