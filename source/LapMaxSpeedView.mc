@@ -3,10 +3,11 @@ import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.Time;
 import Toybox.WatchUi;
+import Toybox.FitContributor;
 
 class LapMaxSpeedView extends WatchUi.DataField {
 
-    hidden var appVersion = "1.2.4";
+    hidden var appVersion = "1.3.2";
     hidden var label;
     hidden var _M_paused;
     hidden var _M_stopped; 
@@ -17,6 +18,7 @@ class LapMaxSpeedView extends WatchUi.DataField {
     //hidden var TEST_LAYOUT = false;
     //hidden var YSHIM_MAX as Number = 13;
     //hidden var YSHIM_MAXAVG as Number = 10;
+    //hidden var speedMultipler = 3.6;
 
     class AveragingBoundedArray {
         hidden var _size as Number;
@@ -91,6 +93,8 @@ class LapMaxSpeedView extends WatchUi.DataField {
         return 0;
     }
 
+    hidden var maxSpeedFloatAvgField = null;
+
     // Set the label of the data field here.
     function initialize() {
         DataField.initialize();
@@ -99,7 +103,19 @@ class LapMaxSpeedView extends WatchUi.DataField {
         _M_stopped = true; 
 
         var lap_speed_array_size = getPropertyValue("avgPeriod");
-        _lap_speed_array = new AveragingBoundedArray((lap_speed_array_size > 0) ? lap_speed_array_size : 10);
+        if (lap_speed_array_size == null || lap_speed_array_size <= 0) {
+            lap_speed_array_size = 10;
+        }
+        _lap_speed_array = new AveragingBoundedArray(lap_speed_array_size);
+
+        // Create the custom FIT data field we want to record.
+        maxSpeedFloatAvgField = createField(
+            "Max speed floatavg (" + lap_speed_array_size + "s)",
+            0,
+            FitContributor.DATA_TYPE_FLOAT,
+            {:mesgType=>FitContributor.MESG_TYPE_RECORD, :units=>"km/h"}
+        );
+        maxSpeedFloatAvgField.setData(0.0);
     }
 
     function onTimerPause() {
@@ -318,7 +334,7 @@ class LapMaxSpeedView extends WatchUi.DataField {
     function compute(info as Activity.Info) as Void {
         if (!_M_paused && !_M_stopped) {
             var s = info.currentSpeed;
-            System.println(speedToKmh(s));
+            //System.println(speedToKmh(s));
 
             if (s != null && s < MAX_SPEED_CHECK.toFloat()) {
                 // this is basic sanity check - the sometimes this can generate non-sense values like 4763019.5
@@ -330,6 +346,7 @@ class LapMaxSpeedView extends WatchUi.DataField {
 
             var lastRunningAvg = _lap_speed_array.getAverage();
             if (lastRunningAvg != null) {
+                maxSpeedFloatAvgField.setData(lastRunningAvg * 3.6);
                 if (_lap_maxfloatavg_speed == null || lastRunningAvg > _lap_maxfloatavg_speed) {
                     _lap_maxfloatavg_speed = lastRunningAvg;
                 }
