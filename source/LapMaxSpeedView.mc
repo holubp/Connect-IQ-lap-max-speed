@@ -8,7 +8,7 @@ import Toybox.System;
 
 class LapMaxSpeedView extends WatchUi.DataField {
 
-    hidden var appVersion = "1.4";
+    hidden var appVersion = "1.4.2";
     hidden var label;
     hidden var _M_paused;
     hidden var _M_stopped; 
